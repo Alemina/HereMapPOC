@@ -1,0 +1,17 @@
+{
+  "name": "here-maps-poc",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "area": "node defineArea.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "request": "^2.87.0",
+    "wellknown": "^0.5.0"
+  }
+}
