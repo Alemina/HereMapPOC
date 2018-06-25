@@ -1,9 +1,38 @@
 var fs = require('fs');
+var http = require('http');
 var request = require('request');
 var parseWkt = require('wellknown');
 
 var appId = 'txpoz50GfMuyShPMF5I2';
 var appCode = 'nN57_wL6Z_SpALh5sgKoMg';
+
+
+http.createServer(function (request, response) {
+
+    if (request.method === 'GET' && request.url === '/points') {
+
+        arePointsInGeofence('./route.wkt', 5, 50, points => {
+            console.log('POINTS:');
+            console.log(points);
+
+            var file = points.join('\n');
+            fs.writeFileSync('result.txt', file);
+
+            response.writeHead(200, {'Content-Type': 'application/json'});
+            response.end(JSON.stringify(points));
+        });
+
+      } else {
+        response.statusCode = 404;
+        response.end();
+    }
+
+}).listen(3000);
+console.log('Server is running on http://localhost:3000');
+
+
+
+// FUNCTIONS
 
 function arePointsInGeofence(pointsWktFile, geofenceId, radius, cb){
 
@@ -34,11 +63,3 @@ function prepareCoordinatesString(coordinates, radius){
 }
 
 
-
-arePointsInGeofence('./route.wkt', 5, 50, points => {
-    console.log('POINTS:');
-    console.log(points);
-
-    var file = points.join('\n');
-    fs.writeFileSync('result.txt', file);
-});
