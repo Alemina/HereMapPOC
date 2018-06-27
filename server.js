@@ -9,26 +9,59 @@ var appCode = 'nN57_wL6Z_SpALh5sgKoMg';
 
 http.createServer(function (request, response) {
 
+  // HTML
+  if (request.method === 'GET' && request.url === '/') {
 
-  // response.writeHead(200, {'Content-Type': 'text/html'});
-  // fs.readFile('./index.html', null, function(error, data){
-  //   if (error){
-  //     response.writeHead(404);
-  //     response.write('File not found!');
-  //   }else{
-  //     response.write(data);
-  //   }
-  //   response.end();
-  // });
+    fs.readFile('./index.html', function(error, content) {
+        if (error){
+            response.writeHead(404);
+            response.write('File not found!');
+            response.end();
+        } else {
+            response.writeHead(200, { 'Content-Type': 'text/html' });
+            response.end(content, 'utf-8');
+        }
+    });
 
-  if (request.method === 'GET' && request.url === '/points') {
+  // CSS
+  } else if (request.method === 'GET' && request.url === '/style.css') {
 
-    arePointsInGeofence('./route.wkt', 5, 50, points => {
+    var cssFile = fs.readFileSync('./style.css');
+    response.writeHead(200, {"Content-Type": "text/css"});
+    response.write(cssFile);
+    response.end();
+
+  // SCRIPT
+  } else if (request.method === 'GET' && request.url === '/script.js') {
+
+    var scriptFile = fs.readFileSync('./script.js');
+    response.writeHead(200, {"Content-Type": "text/javascript"});
+    response.write(scriptFile);
+    response.end();
+
+  // REST /area
+  } else if (request.method === 'GET' && request.url === '/area') {
+
+    arePointsInGeofence('./route1.wkt', 5, 50, points => {
         console.log('POINTS:');
         console.log(points);
 
         var file = points.join('\n');
-        fs.writeFileSync('result.txt', file);
+        fs.writeFileSync('result1.txt', file);
+
+        response.writeHead(200, {'Content-Type': 'application/json'});
+        response.end(JSON.stringify(points));
+    });
+
+  // REST /points
+  } else if (request.method === 'GET' && request.url === '/road') {
+
+    arePointsInGeofence('./route2.wkt', 6, 50, points => {
+        console.log('POINTS:');
+        console.log(points);
+
+        var file = points.join('\n');
+        fs.writeFileSync('result2.txt', file);
 
         response.writeHead(200, {'Content-Type': 'application/json'});
         response.end(JSON.stringify(points));
@@ -43,10 +76,6 @@ http.createServer(function (request, response) {
 
 }).listen(3000);
 console.log('Server is running on http://localhost:3000');
-
-
-
-
 
 
 
@@ -80,5 +109,3 @@ function prepareCoordinatesString(coordinates, radius){
     });
     return result.join(';');
 }
-
-

@@ -22,3 +22,5 @@ function uploadNewGeofence(filePath, geofenceId) {
 }
 
 uploadNewGeofence('./area.wkt', 5);
+
+uploadNewGeofence('./line.wkt', 6);
