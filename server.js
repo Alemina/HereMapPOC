@@ -53,7 +53,7 @@ http.createServer(function (request, response) {
         response.end(JSON.stringify(points));
     });
 
-  // REST /points
+  // REST /road
   } else if (request.method === 'GET' && request.url === '/road') {
 
     arePointsInGeofence('./route2.wkt', 6, 50, points => {
@@ -65,6 +65,25 @@ http.createServer(function (request, response) {
 
         response.writeHead(200, {'Content-Type': 'application/json'});
         response.end(JSON.stringify(points));
+    });
+
+  // REST /matchRoute
+  } else if (request.method === 'GET' && request.url === '/matchRoute') {
+
+    matchRoute(body => {
+        var coordinates = getCoordinates(body);
+
+        checkGeofence(coordinates, 5, 50, points => {
+            console.log('POINTS:');
+            console.log(points);
+
+            var file = points.join('\n');
+            fs.writeFileSync('result3.txt', file);
+
+            response.writeHead(200, {'Content-Type': 'application/json'});
+            response.end(JSON.stringify(points));
+        });
+
     });
 
   } else {
@@ -82,17 +101,46 @@ console.log('Server is running on http://localhost:3000');
 
 // FUNCTIONS
 
-function arePointsInGeofence(pointsWktFile, geofenceId, radius, cb){
+function getCoordinates(obj) {
+    var result = [];
+    obj.RouteLinks.forEach(oneLine => {
+        var coordinates = oneLine.shape.split(' ');
+        for (let i=2; i<coordinates.length; i=i+2) {
+            result.push([coordinates[i+1], coordinates[i]]);
+        }
+    });
+    return result;
+}
 
-    var pointsWktFile = fs.readFileSync(pointsWktFile).toString('utf8');
+function arePointsInGeofence(pointsWktFileName, geofenceId, radius, cb){
+
+    var pointsWktFile = fs.readFileSync(pointsWktFileName).toString('utf8');
     var points = parseWkt(pointsWktFile).coordinates;
+    var pointsString = prepareCoordinatesString(points, radius);
+    var url = 'https://gfe.cit.api.here.com/2/search/proximity.json?app_id=' + appId + '&app_code=' + appCode + '&layer_ids=' + geofenceId + '&proximity=' + pointsString;
+ 
+    request(url, function (error, response, body) {
+        console.log('statusCode:', response && response.statusCode);
+        console.log('error:', error);
+        var results = JSON.parse(body).results;
+        results.forEach((result, index) => {
+            points[index][2] = !!result.geometries.length;
+        });
+        cb(points);
+    });
+
+}
+
+function checkGeofence(points, geofenceId, radius, cb){
+
     var pointsString = prepareCoordinatesString(points, radius);
     var url = 'https://gfe.cit.api.here.com/2/search/proximity.json?app_id=' + appId + '&app_code=' + appCode + '&layer_ids=' + geofenceId + '&proximity=' + pointsString;
  
     console.log(url);
     request(url, function (error, response, body) {
         console.log('statusCode:', response && response.statusCode);
-        var results = JSON.parse(body).results;
+        console.log('error:', error);
+        var results = JSON.parse(body).results || [];
         results.forEach((result, index) => {
             points[index][2] = !!result.geometries.length;
         });
@@ -108,4 +156,20 @@ function prepareCoordinatesString(coordinates, radius){
         return str;
     });
     return result.join(';');
+}
+
+function matchRoute(cb) {
+    
+    var target = 'http://rme.cit.api.here.com/2/matchroute.json?routemode=car&app_id=' + appId + '&app_code=' + appCode;
+
+    var rs = fs.createReadStream('./route.gpx');
+    var ws = request.post(target, (error, response, body) => {
+        cb(JSON.parse(body));
+    });
+
+    ws.on('drain', function () {
+    rs.resume();
+    });
+
+    rs.pipe(ws);
 }
